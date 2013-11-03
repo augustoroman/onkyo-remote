@@ -6,11 +6,14 @@ import (
 	"time"
 )
 
-func Discover(timeout time.Duration, errs chan<- error) <-chan Device {
+func Discover(quit <-chan time.Time, errs chan<- error) <-chan Device {
 	d := newDiscoverer(errs)
 	if d.start() {
-		// Shutdown the connection after the timeout.
-		time.AfterFunc(timeout, func() { d.conn.Close() })
+		// Shutdown the connection when we get a signal.
+		go func() {
+			<-quit
+			d.conn.Close()
+		}()
 	}
 	return d.devices
 }
@@ -36,7 +39,6 @@ func (d *discoverer) start() bool {
 	var err error
 	d.conn, err = net.ListenUDP("udp", discoverListenAddr)
 	if d.isErr(err) {
-		log.Println("x")
 		close(d.devices)
 		return false
 	}
@@ -45,7 +47,6 @@ func (d *discoverer) start() bool {
 
 	_, err = d.conn.WriteToUDP(discoverPacket.bytes(), discoverBroadcastAddr)
 	if d.isErr(err) {
-		log.Println("y")
 		d.conn.Close()
 		close(d.devices)
 		return false
@@ -56,7 +57,6 @@ func (d *discoverer) start() bool {
 }
 
 func (d *discoverer) monitor() {
-	log.Println("Listening...")
 	data := make([]byte, maxPacketSize)
 	for {
 		msglen, from, err := d.conn.ReadFromUDP(data)
@@ -64,12 +64,10 @@ func (d *discoverer) monitor() {
 			break
 		}
 		p := packet(data[:msglen])
-		// log.Println("\n" + pretty(p.hex()))
 		if !p.equals(discoverPacket) {
 			d.createDevice(p, from)
 		}
 	}
-	log.Println("Done")
 	d.conn.Close()
 	close(d.devices)
 }

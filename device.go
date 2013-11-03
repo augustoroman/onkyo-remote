@@ -27,8 +27,10 @@ func (d DeviceCategory) String() string {
 	return string(d)
 }
 
-const CategoryDevice = DeviceCategory('1')
-const CategoryAny = DeviceCategory('x')
+const (
+	CategoryDevice = DeviceCategory('1') // Denotes receivers.
+	CategoryAny    = DeviceCategory('x') // Used for discovery
+)
 
 type device struct {
 	conn   net.Conn

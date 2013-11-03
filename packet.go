@@ -19,10 +19,6 @@ const magic = "ISCP"
 const terminator = "\000\r\n"
 const version = 1
 
-func init() {
-	fmt.Printf("TERM: %q  %x\n", terminator, terminator)
-}
-
 type packet []byte
 
 func (p packet) bytes() []byte        { return []byte(p) }
@@ -126,7 +122,7 @@ func encodePacket(message string, cat DeviceCategory) packet {
 }
 
 func decodePackets(data []byte) ([]packet, error) {
-	var errs multierror.MultiError
+	var errs multierror.Accumulator
 	var packets []packet
 
 	for len(data) > 0 {
